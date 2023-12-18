@@ -1,10 +1,10 @@
 # libraries ----
 librarian::shelf(
   bslib,
-  dplyr, DT, geojsonio, glue, here,
+  dplyr, DT, fs, geojsonio, glue, here,
   leaflet,
   micahwilhelm/leaflet.extras, # addDrawToolbar()
-  MarineSensitivity/msens,
+  # MarineSensitivity/msens,
   yogevherz/plotme,  # count_to_treemap()
   plotly,
   shiny,
@@ -18,18 +18,35 @@ source(here("inst/app/functions.R"))
 #  - [ ] migrate functions.R to aquamapsduckdb R package
 #  - [ ] swap out shinydashboard for bslib
 #        https://rstudio.github.io/bslib/articles/dashboards/
+#  - [ ] add function to download and import if not exists. See https://blog.r-hub.io/2020/05/29/distribute-data/#data-outside-of-your-package
 
+# duckdb connection to AquaMaps ----
+dir_bigdata     <- ifelse(
+  Sys.info()[["sysname"]] == "Linux",
+  "/share/data/aquamapsduckdb",
+  "/Users/bbest/My Drive/projects/msens/data")
+path_am         <- glue("{dir_bigdata}/am.duckdb")
 dir_data        <- here("inst/app/data")
 sanctuaries_rds <- glue("{dir_data}/sanctuaries.rds")
 nspp_tif        <- glue("{dir_data}/am_nspp.tif")
 nspp_3857_tif   <- glue("{dir_data}/am_nspp_3857.tif")
 
-if (!file.exists(sanctuaries_rds))
-  download.file(
-    "https://github.com/noaa-onms/climate-dashboard/raw/main/data/sanctuaries.rds",
-    sanctuaries_rds)
-sanctuaries <- readRDS(sanctuaries_rds) |>
-  filter(nms != "TBNMS") # exclude Thunder Bay in Great Lakes
+if (!file.exists(path_am)){
+  message("reimporting AquaMaps database")
+
+  dir_dbexport <- glue("{dir_bigdata}/am.duckdb_export")
+
+  stopifnot(dir.exists(dir_bigdata))
+  stopifnot(dir.exists(dir_dbexport))
+
+  con_am <- dbConnect(
+    duckdb(
+      dbdir     = path_am,
+      read_only = F))
+
+  dbExecute(con_am, glue("IMPORT DATABASE '{dir_dbexport}'"))
+  dbDisconnect(con_am, shutdown = T)
+}
 
 # con_am start/stop ----
 message("connecting to AquaMaps database")
@@ -42,6 +59,14 @@ onStop(function() {
   message("shutting down AquaMaps database")
   dbDisconnect(con_am, shutdown = TRUE)
 })
+
+# recreate other data files ----
+if (!file.exists(sanctuaries_rds))
+  download.file(
+    "https://github.com/noaa-onms/climate-dashboard/raw/main/data/sanctuaries.rds",
+    sanctuaries_rds)
+sanctuaries <- readRDS(sanctuaries_rds) |>
+  filter(nms != "TBNMS") # exclude Thunder Bay in Great Lakes
 
 if (!file.exists(nspp_3857_tif)){
 

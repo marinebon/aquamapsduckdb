@@ -11,10 +11,6 @@ librarian::shelf(
   leaflet, stringr, terra, tibble,
   quiet = T)  # zeallot
 
-# duckdb connection to AquaMaps ----
-dir_data <- "/Users/bbest/My Drive/projects/msens/data"
-path_am  <- glue("{dir_data}/derived/aquamaps/am.duckdb")
-
 am_spp <- function(){
 
   tbl(con_am, "spp") |>
@@ -170,4 +166,21 @@ am_rast_template <- function(values="NA"){
   }
 
   r
+}
+
+ms_basemap <- function(base_opacity = 0.5){
+
+  leaflet::leaflet() |>
+    # add base: blue bathymetry and light brown/green topography
+    leaflet::addProviderTiles(
+      "Esri.OceanBasemap",
+      options = leaflet::providerTileOptions(
+        variant = "Ocean/World_Ocean_Base",
+        opacity = base_opacity)) |>
+    # add reference: placename labels and borders
+    leaflet::addProviderTiles(
+      "Esri.OceanBasemap",
+      options = leaflet::providerTileOptions(
+        variant = "Ocean/World_Ocean_Reference",
+        opacity = base_opacity))
 }
