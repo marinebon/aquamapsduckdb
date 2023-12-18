@@ -1,16 +1,30 @@
-dashboardPage(
-  dashboardHeader(
-    title = "AquaMaps & Sanctuaries"),
-  dashboardSidebar(
+page_sidebar(
+  title = "AquaMaps Species by Sanctuary",
+  helpText("Select a Sanctuary or Draw a polygon (toolbar on left of Map)
+             to filter to species and view as Table or treemap Plot."),
+
+  sidebar = sidebar(
+    title = "Selection",
     selectInput(
-      "sel_sanct", "Select Sanctuary:",
+      "sel_sanct", "Sanctuary",
       lst_sancts),
-    hr(),
-    helpText("Draw polygon (toolbar on left of map) to find species there. Defaults to global."),
-    actionButton(
-      "btn_spp",
-      glue("Show species (n={format(nrow(d_spp_g), big.mark = ',')})")),
-    collapsed = F),
-  dashboardBody(
-    tags$head(tags$link(rel="stylesheet", type="text/css", href="styles.css")),
-    leafletOutput("map") ) )
+    textOutput("txt_status") ),
+
+  tags$head(tags$link(rel="stylesheet", type="text/css", href="styles.css")),
+
+  navset_card_pill(
+    placement = "above",
+    nav_panel(
+      title = "Map",
+      leafletOutput("map") ),
+    nav_panel(
+      title = "Table",
+      helpText("amt = n_cells * avg_pct * avg_prob"),
+      helpText("Amount (amt) is the multiplication of the number of cells (n_cells),
+               average percent (avg_pct) of a cell's contents within the selected polygon,
+               and the average Suitability (avg_suit; 0 to 1) of the species given by AquaMaps."),
+      dataTableOutput("tbl_spp") ),
+    nav_panel(
+      title = "Plot",
+      helpText("Note: The rendering of this treeamp plot is SLOW if # species > 1,000. Use toolbar on left of map to draw a smaller area with fewer species."),
+      plotlyOutput("plt_spp") ) ) )

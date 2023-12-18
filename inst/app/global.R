@@ -1,12 +1,15 @@
 # libraries ----
 librarian::shelf(
+  bslib,
   dplyr, DT, geojsonio, glue, here,
   leaflet,
   micahwilhelm/leaflet.extras, # addDrawToolbar()
   MarineSensitivity/msens,
   yogevherz/plotme,  # count_to_treemap()
   plotly,
-  shiny, shinydashboard, sf, tibble)
+  shiny,
+  # shinydashboard,
+  sf, tibble)
 
 source(here("inst/app/functions.R"))
 
@@ -92,6 +95,7 @@ ply_g <- ext(-180, 180, -90, 90) |>
   st_bbox() |>
   st_as_sfc() |>
   st_as_sf(crs = 4326)
-st_geometry(ply_g) = "geom"
+st_geometry(ply_g) <- "geom"
+attr(ply_g, 'name') <- "Globe"
 
 d_spp_g <- am_spp_in_ply()

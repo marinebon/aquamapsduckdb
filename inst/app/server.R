@@ -54,22 +54,28 @@ shinyServer(function(input, output, session) {
 
   # * select sanctuary ----
   observe({
-    req(input$sel_sanct != "_NA_")
+    req(input$sel_sanct != "_NA_") # !rxvals$name %in% c("Globe", "Drawn polygon"))
 
-    rxvals$ply <- filter(sanctuaries, nms == input$sel_sanct)
+    message("observe sanct select")
+    #browser()
+
+    ply <- filter(sanctuaries, nms == input$sel_sanct)
+    attr(ply, "name") <- ply$sanctuary
+    rxvals$ply <- ply
   })
 
   # * click sanctuary ----
   observe({
-    req(input$map_shape_click$id)
+    req(input$map_shape_click$id %in% setdiff(sanctuaries$sanctuary, "_NA_"))
 
+    message("observe sanct click")
     updateSelectInput(
       session,
       "sel_sanct",
       selected = input$map_shape_click$id)
   })
 
-  # * drawn ply -> rxvals$ply ----
+  # * draw -> rxply ----
   observeEvent(input$map_draw_new_feature, {
     feature <- input$map_draw_new_feature
 
@@ -81,29 +87,36 @@ shinyServer(function(input, output, session) {
       selected = "_NA_")
 
     ply <- st_read(as.json(feature$geometry), quiet=T)
-    st_geometry(ply_g) = "geom"
+    st_geometry(ply) <- "geom"
+    attr(ply, "name") <- "Drawn polygon"
     rxvals$ply <- ply
+
+    message(isolate(glue("draw: set name: {attr(rxvals$ply, 'name')}")))
   })
 
-  # * rx.ply -> rx.d_spp ----
+  # * rxply -> rxspp ----
   observeEvent(rxvals$ply, {
 
-    # browser()
-    if (rxvals$ply$geom == ply_g$geom) {
+    if (attr(rxvals$ply, 'name') == "Globe"){
+
+      message("observe rxply - Globe")
 
       leafletProxy("map") |>
         clearGroup("selected")
-
     } else {
 
-      lbls <- ifelse(
-        "sanctuary" %in% names(rxvals$ply),
-        rxvals$ply$sanctuary,
-        "Drawn polygon")
+      if(attr(rxvals$ply, 'name') == "Drawn polygon"){
+        message("observe rxply - Drawn:", attr(rxvals$ply, 'name'))
+      } else {
+        message("observe rxply - sanct:", attr(rxvals$ply, 'name'))
+      }
+
+      # browser()
 
       # ply add and zoom
       b   <- st_bbox(rxvals$ply) |> as.numeric()
 
+      message(paste("add and zoom to b:", paste(b, collapse = ', ')))
       leafletProxy("map") |>
         clearGroup("selected") |>
         addPolygons(
@@ -113,41 +126,33 @@ shinyServer(function(input, output, session) {
           weight      = 5,
           color       = "yellow",
           fillOpacity = 0,
-          label       = lbls) |>
+          label       = attr(rxvals$ply, 'name')) |>
         flyToBounds(b[1], b[2], b[3], b[4])
     }
 
+    message("observe rxply finish")
+    #browser()
+
     # ply to update d_spp
     rxvals$d_spp <- am_spp_in_ply(rxvals$ply)
-    updateActionButton(
-      session,
-      "btn_spp",
-      glue("Show species (n={format(nrow(rxvals$d_spp), big.mark = ',')})"))
   })
 
-  # spp modal ----
-  observeEvent(input$btn_spp, {
-    showModal(modalDialog(
-      title = "Species",
-      size = "xl",
-      tabsetPanel(
-        id = "tabs_spp",
-        tabPanel(
-          "Table",
-          helpText("amt = n_cells *  avg_pct * avg_prob"),
-          dataTableOutput("tbl_spp")),
-        tabPanel(
-          "Treemap",
-          helpText("Note: Treeamp rendering is SLOW if species n > 1,000. Use toolbar on left of map to draw a smaller area with fewer species."),
-          plotlyOutput("plt_spp")) )))})
+  # Text ----
 
-  # * tbl_spp ----
+  # * txt_status ----
+  output$txt_status <- renderText({
+    place <- attr(rxvals$ply, 'name')
+    n_spp <- nrow(rxvals$d_spp)
+    glue("# species for {place}: {format(nrow(rxvals$d_spp), big.mark = ',')}")
+    })
+
+  # Table: tbl_spp ----
   output$tbl_spp <- DT::renderDataTable({
     rxvals$d_spp |>
       rename(
         n_cells  = n_cells,
         avg_pct  = avg_weight,
-        avg_prob = avg_probability,
+        avg_suit = avg_probability,
         amt      = n) |>
       datatable(
         extensions = c("Buttons", "FixedColumns"),
@@ -158,12 +163,18 @@ shinyServer(function(input, output, session) {
           buttons      = c("copy", "csv", "excel", "pdf", "print"),
           fixedColumns = T ),
         rownames = F)  |>
+      formatPercentage(
+        columns = c("avg_pct", "avg_suit"),
+        digits  = 0) |>
       formatRound(
-        columns = c("n_cells", "avg_pct", "avg_prob", "amt"),
-        digits  = 2) },
+        columns = c("n_cells"),
+        digits  = 0) |>
+      formatRound(
+        columns = c("amt"),
+        digits  = 3) },
     server = F)
 
-  # * plt_spp ----
+  # Plot: plt_spp ----
   output$plt_spp <- renderPlotly({
 
     rxvals$d_spp |>
