@@ -4,7 +4,7 @@ librarian::shelf(
   dplyr, DT, fs, geojsonio, glue, here,
   leaflet,
   micahwilhelm/leaflet.extras, # addDrawToolbar()
-  # MarineSensitivity/msens,
+  MarineSensitivity/msens,
   yogevherz/plotme,  # count_to_treemap()
   plotly,
   shiny,
@@ -27,7 +27,6 @@ dir_bigdata     <- ifelse(
   "/Users/bbest/My Drive/projects/msens/data")
 path_am         <- glue("{dir_bigdata}/am.duckdb")
 dir_data        <- here("inst/app/data")
-sanctuaries_rds <- glue("{dir_data}/sanctuaries.rds")
 nspp_tif        <- glue("{dir_data}/am_nspp.tif")
 nspp_3857_tif   <- glue("{dir_data}/am_nspp_3857.tif")
 
@@ -61,13 +60,6 @@ onStop(function() {
 })
 
 # recreate other data files ----
-if (!file.exists(sanctuaries_rds))
-  download.file(
-    "https://github.com/noaa-onms/climate-dashboard/raw/main/data/sanctuaries.rds",
-    sanctuaries_rds)
-sanctuaries <- readRDS(sanctuaries_rds) |>
-  filter(nms != "TBNMS") # exclude Thunder Bay in Great Lakes
-
 if (!file.exists(nspp_3857_tif)){
 
   r <- am_rast_nspp()
@@ -100,22 +92,23 @@ if (!file.exists(nspp_3857_tif)){
 r_nspp_3857 <- rast(nspp_3857_tif)
 
 # global defaults ----
+ply_rgns <- msens::ply_rgns_s05
 
-lst_sancts <- c(
-  setNames("_NA_", "None"),
-  with(
-    sanctuaries,
-    setNames(nms, sanctuary)))
+lst_rgns <- ply_rgns_s05 |>
+  st_drop_geometry() |>
+  arrange(shlf_name, rgn_name) |>
+  group_by(shlf_name) |>
+  summarize(
+    rgns = list(setNames(rgn_key, rgn_name))) |>
+  deframe()
+lst_rgns <- c(
+  list(Overview = setNames("_NA_", "None")),
+  lst_rgns)
 
-# bounding box initially around sanctuaries
-b <- st_bbox(sanctuaries) |> as.numeric()
+# bounding box initially around regions
+b <- st_bbox(ply_rgns) |> as.numeric()
 
 # global defaults ----
-ply_g <- ext(-180, 180, -90, 90) |>
-  st_bbox() |>
-  st_as_sfc() |>
-  st_as_sf(crs = 4326)
-
 ply_g <- ext(-180, 180, -90, 90) |>
   st_bbox() |>
   st_as_sfc() |>

@@ -22,13 +22,13 @@ shinyServer(function(input, output, session) {
         colors  = pal,
         opacity = 0.9) |>
       addPolygons(
-        data        = sanctuaries,
-        layerId     = ~nms,
+        data        = ply_rgns,
+        layerId     = ~rgn_key,
         color       = "purple",
         opacity     = 1,
         weight      = 2,
         fillOpacity = 0,
-        label       = ~sanctuary,
+        label       = ~rgn_name,
         highlightOptions = highlightOptions(
           weight       = 3,
           color        = "yellow",
@@ -52,26 +52,26 @@ shinyServer(function(input, output, session) {
       fitBounds(b[1], b[2], b[3], b[4])
   })
 
-  # * select sanctuary ----
+  # * select region ----
   observe({
-    req(input$sel_sanct != "_NA_") # !rxvals$name %in% c("Globe", "Drawn polygon"))
+    req(input$sel_rgn != "_NA_") # !rxvals$name %in% c("Globe", "Drawn polygon"))
 
-    message("observe sanct select")
+    message("observe rgn select")
     #browser()
 
-    ply <- filter(sanctuaries, nms == input$sel_sanct)
-    attr(ply, "name") <- ply$sanctuary
+    ply <- filter(ply_rgns, rgn_key == input$sel_rgn)
+    attr(ply, "name") <- ply$rgn_name
     rxvals$ply <- ply
   })
 
-  # * click sanctuary ----
+  # * click region ----
   observe({
-    req(input$map_shape_click$id %in% setdiff(sanctuaries$sanctuary, "_NA_"))
+    req(input$map_shape_click$id %in% setdiff(ply_rgns$rgn_key, "_NA_"))
 
-    message("observe sanct click")
+    message("observe rgn click")
     updateSelectInput(
       session,
-      "sel_sanct",
+      "sel_rgn",
       selected = input$map_shape_click$id)
   })
 
@@ -83,7 +83,7 @@ shinyServer(function(input, output, session) {
 
     updateSelectInput(
       session,
-      "sel_sanct",
+      "sel_rgn",
       selected = "_NA_")
 
     ply <- st_read(as.json(feature$geometry), quiet=T)
@@ -108,7 +108,7 @@ shinyServer(function(input, output, session) {
       if(attr(rxvals$ply, 'name') == "Drawn polygon"){
         message("observe rxply - Drawn:", attr(rxvals$ply, 'name'))
       } else {
-        message("observe rxply - sanct:", attr(rxvals$ply, 'name'))
+        message("observe rxply - rgn:", attr(rxvals$ply, 'name'))
       }
 
       # browser()
@@ -171,8 +171,9 @@ shinyServer(function(input, output, session) {
         digits  = 0) |>
       formatRound(
         columns = c("amt"),
-        digits  = 3) },
-    server = F)
+        digits  = 3)
+    # }, server = F)
+    })
 
   # Plot: plt_spp ----
   output$plt_spp <- renderPlotly({
