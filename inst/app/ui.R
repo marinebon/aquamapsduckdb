@@ -19,12 +19,12 @@ page_sidebar(
       leafletOutput("map") ),
     nav_panel(
       title = "Table",
-      helpText("amt = n_cells * avg_pct * avg_prob"),
+      helpText("amt = n_cells * avg_pct * avg_suit"),
       helpText("Amount (amt) is the multiplication of the number of cells (n_cells),
                average percent (avg_pct) of a cell's contents within the selected polygon,
-               and the average Suitability (avg_suit; 0 to 1) of the species given by AquaMaps."),
+               and the average Suitability (avg_suit; 0 to 100%) of the species given by AquaMaps."),
       dataTableOutput("tbl_spp") ),
     nav_panel(
       title = "Plot",
-      helpText("Note: The rendering of this treeamp plot is SLOW if # species > 1,000. Use toolbar on left of map to draw a smaller area with fewer species."),
+      helpText("Note: The rendering of this treemap plot is SLOW if # species > 1,000. Use toolbar on left of map to draw a smaller area with fewer species."),
       plotlyOutput("plt_spp") ) ) )
