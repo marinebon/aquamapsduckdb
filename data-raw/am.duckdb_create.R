@@ -171,13 +171,8 @@ if (!file.exists(renames_csv) | redo){
 d_renames <- read_csv(renames_csv)
 
 datatable(d_renames)
-```
 
-## streamline `spp_cells`, `spp_occs` to use `cell_id`
-
-```{r}
-#| label: streamline fields to use `cell_id`
-#| eval: false
+# streamline `spp_cells`, `spp_occs` to use `cell_id` ----
 
 if (F){
   d_spp_cells <- tbl(con_dd, "spp_cells") |>
@@ -202,13 +197,8 @@ if (F){
 # TODO: update _tbl_fld_renames to this streamlining
 #   spp_cells.csquare_code|center_lat|center_long -> cell_id
 #   spp_occs.csquare_code                         -> cell_id
-```
 
-## add indexes
-
-```{r}
-#| label: add indexes
-#| eval: false
+# add indexes ----
 
 create_index <- function(con, tbl, flds, is_unique = F){
   unq  <- {ifelse(is_unique, 'UNIQUE','')}
@@ -230,16 +220,14 @@ if (F){
   create_index(con_dd, "spp_occs",  "cell_id")
   create_index(con_dd, "spp_occs",  "sp_key")
 }
-```
 
-## export/import db
+# export/import db ----
 
-for:
+# for:
+# - version compatibility (since duckdb is not backwards compatible with itself before version 1.0); and
+# - reducing file size
 
-  - version compatibility (since duckdb is not backwards compatible with itself before version 1.0); and
-- reducing file size
-
-# export duckdb ----
+# * export duckdb ----
 
 dbExecute(con_dd, glue("EXPORT DATABASE '{dir_dbexport}' (FORMAT PARQUET)"))
 
@@ -248,3 +236,6 @@ zip(
   files             = dir_dbexport,
   recurse           = T,
   compression_level = 9)
+
+
+dbExecute(con_dd, glue("IMPORT DATABASE '{dir_dbexport}' (FORMAT PARQUET)"))
