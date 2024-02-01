@@ -26,6 +26,12 @@ am_spp_in_ply <- function(ply = NULL){
   # get spp in polygon
   # ply: polygon sf object
 
+  if (!exists("con_am"))
+    con_am <- dbConnect(
+      duckdb(
+        dbdir     = "/share/data/aquamapsduckdb/am.duckdb",
+        read_only = T))
+
   if (!is.null(ply)){
     ply <- st_wrap_dateline(ply)
 
@@ -166,6 +172,30 @@ am_rast_template <- function(values="NA"){
   }
 
   r
+}
+
+get_psply <- function(
+    psgid,
+    dir_cache = here::here("tmp"),
+    url_pfx   = "https://map.navigatormap.org/api/boundary/area/?gid=",
+    redo      = FALSE){
+  # psgid = 36
+
+  geo <- glue::glue("{dir_cache}/psgid_{psgid}.geojson")
+
+  if (!file.exists(geo) | redo) {
+    ply_url <- paste0(url_pfx, psgid)
+
+    # download.file(ply_url, geo)
+    suppressWarnings({
+      readLines(ply_url) |>
+        stringr::str_replace('^\\{"bounds":(.*)\\}$', '\\1') }) |>
+      geojsonsf::geojson_sf() |>
+      sf::st_zm(drop = TRUE) |>
+      sf::st_write(geo, delete_dsn = T)
+  }
+
+  st_read(geo, quiet = T)
 }
 
 ms_basemap <- function(base_opacity = 0.5){
